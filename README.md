@@ -1,4 +1,8 @@
 # Analysis-of-nanoporeSeq-data
+
+This project has been done by Andrej Šimurka (Faculty of Informatics, Masaryk University, Brno) and Oto Stanko (Faculty of Informatics, Masaryk University, Brno)
+as a semester project for the "IV114 Bioinformatics and Systems Biology project" course in autumn 2021.
+
 Basecalling and follow-up processing and analysis of water sample from a pond near Studentka town (Czech Republic)
 
 This file describes functionality of bash script "workflow.sh".
