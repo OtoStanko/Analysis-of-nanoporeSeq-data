@@ -1,68 +1,59 @@
 # Analysis-of-nanoporeSeq-data
 Basecalling and follow-up processing and analysis of water sample from a pond near Studentka town (Czech Republic)
 
-Tento súbor slúži na popis funkcionality skriptu "workflow.sh".
-Popisuje ako a prečo sme spúšťali jednotlivé nástroje tak, ako sú volané v skripte.
-Na to aby bol skript funkčný je bohužiaľ potrebné dodržať presnú štruktúru a obsah priečinku s nástrojmi a databázami,
-ktorý je zadávaný pomocou voľby -t. 
-Priečinok musí obsahovať: 1. podpriečinky pre každý nástroj {guppy, Porechop, FastQC, fastp, krona, kraken2}
-			                    2. v každom priečinku musí byť spustiteľný súbor pre daný nástroj a všetky ďalšie súbory a databázy, ktoré nástroj potrebuje
-                          3. v priečinku kraken2 musí byť priečinok s databázami s presným pomenovaním
-                          4. v priečinku krona musí byť priečinok s taxonomickou databázou
+This file describes functionality of bash script "workflow.sh".
+Description includes what tools we used in the script and why.
+Structure of the directories with input files is strict and must be followed in order to recreate our process.
+Directory must contain:
+	1. subdirectories for every tool used {guppy, Porechop, FastWC, fastp, krona, kraken2}
+	2. in every subdirectory for the tools, there must be executable for that tool alongside all the files and databases that are used by the tool
+	3. in the directory with the kraken2 tool, there must be a directory with the databases used by kraken2
+	4. in the directory with the krona tool, there must be a directory with taxonomical database
+	
+Parameter -d directory to which all the output files will be saved (including the output files from the tools during the process)
+Parameter -i directory containing input fast5 files from the nanopore sequencing
+Parameter -b number of the Barcode of the sample
 
-Voľbou -d zadávame priečinok do ktorého bude skript vkladať výstupy z jednotlivých nástrojov
-Voľbou -i zadávame priečinok so vstupnými fast5 dátami zo sekvenátora
-Voľbou -b zadávame číslo barkódu našej vzorky
+The script automizes process of identification of organisms in the sample of water (in our case from a pond in Moravia). Structure of the directory tree is quite strict and we acknowledge that it may be hard to reproduce. Its main purpose is to show out workflow. Tools we used and the results obtained from the analysis.
 
-Skript bol vyrobený pre účely automatizácie jednotlivých krokov práce s dátami, štruktúra je preto prispôsobená štruktúre nášho pracovného
-adresára a jeho opätovná prevádzka je komplikovaná. 
-Je určený na ilustráciu nami použitého workflowu, teda: aké nástroje sme použili, v akom poradí a na akých vstupných dátach sme ich spúšťali.
 
 BASECALLING:
-Skopírujeme ready s naším barcodom do pracovného adresára.
-Vyrobíme adresár na ukladanie výstupov.
-Spustíme basecalling na skopírovaných dátach. Použili sme high=accuracy config file "dna_r9.4.1_450bps_hac.cfg"
+Reads tagged with our Barcode are copied to the working directory.
+creating the dir for supporting output files.
+Basecalling is run on the copied data. We used high=accuracy config file "dna_r9.4.1_450bps_hac.cfg"
 
 OUTPUT CONCAT:
-Zlúčime všetky výstupné fastq sekvencie označené ako "pass" s naším barcodom do jedného súboru pre lepšiu manipuláciu
+We have joint all the output fastq sequences tagged as "pass" with our Barcode into one file for better manipulation.
 
 RAW QUALITY REPORT:
-Vyrobíme quality report z čistých dát z basecalleru.
+We have created quality report from the raw data after basecalling.
 
 TRIMMING ADAPTERS:
-Vyrežeme adaptéry zo sekvencií. Nástroj guppy pozná nanopore adaptéry.
-Pomocou voľby --no_split zakážeme vyrezávanie adaptérov zo stredu readov.
+We cut out adapters from the sequences. Tool Guppy has a database of some known adapters used in nanopore sequencing.
+With the parameter --no_split we forbid the cutting of adapters from the middle of the sequences.
 
 TRIMMED QUALITY REPORT:
-Vyrobíme quality report z dát bez adaptérov.
+We created another quality report after the adapters are removed.
 
 QUALITY IMPROVMENT:
-Vyfiltrujeme nekvalitné dáta, teda tie, ktoré majú phred score menšie ako 20.
+We have set phred score threshhold to 20 to filter out sequences of poor quality.
 
-IMPROVED QUALITY REPORT:
-Vyrobíme quality report z vylepšených dát.
+IMPROVED QUALITY REPORT.
+...
 
 TAXONOMIC ANALYSIS:
-Postupne vyrobíme taxonomickú analýzu dát s použitím 4 rôznych databáz, pretože každá lepšie detekuje istú skupinu organizmov.
-V prvom volaní kraken2 nástroja pomocou voľby --classified-out vyfiltrujeme iba tie fastq sekvencie, ktoré daná databáza identifikuje.
-V druhom volaní kraken2 použijeme iba tieto fastq sekvencie čo nám zaručí 100% match pri taxonomickej analýze.
-Následne všetky 4 výsledné subory zlúčime do jedného, ktorý obsahuje všetky tax ID ktoré sa nachádzajú aspoň v jednej z databáz.
-Dáta, ktoré sa nachádzajú vo viacerých databázach sa vo výsledku objavia viackrát, čo mierne skresluje kvantitu zastúpenia vo vzorke.
-Výhodou je však zachytenie širokého spektra organizmov.
+Taxonomical analysis is done using 4 databases. Each is better at detecting some groups of organisms.
+In the first run of the Krake2, we specify --classified-out to filter only the sequences that the database was able to identify.
+In the second run we use these sequences, so that we would only be left with the identified seqs for the analysis.
+All 4 files are joint together. There may be sequences that have been identified by multiple databases and thus may appear multiple times in the joint file.
 
 TAXONOMIC REPORT:
-Zo zlúčeného výstupu taxonomickej analýzy vystrihneme 2., 3. a 4. stĺpec, pretože iba tie sú vstupom do nástroja krona.
-2. stĺpec je querry ID
-3. stĺpec je taxonomy ID
-4. stĺpec je score (zodpovedá kvantite organizmu s daným taxID) 
+We take only some collumns from the Taxonomic analysis, needed for the krona.
+2. column - querry ID
+3. column - taxonomy ID
+4. column - quality score
 
-Následne zavoláme 2x nástroj krona. Pomocou voľby --tax určime cestu k stiahnutej taxonomickej databáze z NCBI.
-Pri prvom spustení si chybový výstup presmerujeme do súboru. 
-Chybový výstup obsahuje zoznam taxID, ktoré neboli v NCBI nájdené. Tie pomocou python skriptu "parser.py" spracujeme a vložíme 
-do samostatného súboru, kde na každom riadku je jedno taxID. Následne postupne prechádzane tieto taxID a vo vstupných dátach
-pre kronu vymažeme postupne všetky riadky s danými taxID, ktoré sa v NCBI databáze vôbec nenachádzajú. Takto vyčistíme výstupný
-graf krony. 
-Následne na upravenom vstupe spustíme druhýkrát kronu a obdržíme výsledný koláčový graf obsahujúci všetky organizmy nachádzajúce sa vo vzorke.
-Aj napriek úprave dát, sa môže stať, že malé % taxID sa zobrazí ako tzv. other root. 
-To môže byť spôsobené tým, že niektoré taxID sa v NCBI databáze síce nachádzajú, ale ich taxonomické zaradenie je odlišné alebo žiadne
-a nevedia sa zobraziť v koreňovej štruktúre grafu.
+Krona is run 2 times. With the parameter --tax, we specify path to the taxonomical database from NCBI.
+In the first run we redirect the error messages to the file. It contains the list of taxIDs taht were not found in the NCBI database.
+"parser.py" copies these IDs to the file that is used for filtering out these rows from the input file to the second run of Krona.
+In the filtered input data we run the Krona for the second time to obtain the pie-chart containing organisms from the original sample.
